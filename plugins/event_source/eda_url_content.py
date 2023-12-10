@@ -34,12 +34,19 @@ Example Event Output:
 
 import asyncio
 import aiohttp
+import logging
 from typing import Any, Dict
+
+logging.basicConfig(level=logging.INFO)
 
 async def main(queue: asyncio.Queue, args: Dict[str, Any]):
     urls = args.get("urls", [])
     delay = args.get("delay", 60)
     verify_ssl = args.get("verify_ssl", True)
+
+    if not urls:
+        logging.info("No URLs provided to poll.")
+        return
 
     while True:
         for url in urls:
@@ -48,9 +55,7 @@ async def main(queue: asyncio.Queue, args: Dict[str, Any]):
                     async with session.get(url, ssl=verify_ssl) as response:
                         status_code = response.status
                         content = await response.text()
-                        # Determine status based on HTTP status code
                         status = "up" if status_code == 200 else "down"
-                        # Create event with URL status and content
                         event = {
                             "eda_url_content": {
                                 "status_code": status_code,
@@ -60,8 +65,8 @@ async def main(queue: asyncio.Queue, args: Dict[str, Any]):
                             }
                         }
                         await queue.put(event)
+                        logging.info(f"Event created for URL {url}: {event}")
                 except aiohttp.ClientError as e:
-                    # In case of a client error, create an event indicating the URL is down
                     event = {
                         "eda_url_content": {
                             "status_code": 0,
@@ -71,10 +76,11 @@ async def main(queue: asyncio.Queue, args: Dict[str, Any]):
                         }
                     }
                     await queue.put(event)
+                    logging.error(f"Error polling URL {url}: {e}")
         await asyncio.sleep(delay)
+        logging.info(f"Waiting for {delay} seconds before next poll.")
 
 if __name__ == "__main__":
-    # This part is for testing the plugin directly, outside of ansible-rulebook
     class MockQueue:
         async def put(self, event):
             print("Event received:", event)
@@ -84,5 +90,5 @@ if __name__ == "__main__":
         "delay": 10,
         "verify_ssl": False
     }
-    
+
     asyncio.run(main(MockQueue(), mock_args))
