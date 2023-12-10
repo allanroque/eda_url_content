@@ -49,9 +49,9 @@ async def main(queue: asyncio.Queue, args: Dict[str, Any]):
         return
 
     while True:
-        for url in urls:
+        try:
             async with aiohttp.ClientSession() as session:
-                try:
+                for url in urls:
                     async with session.get(url, ssl=verify_ssl) as response:
                         status_code = response.status
                         content = await response.text()
@@ -65,20 +65,18 @@ async def main(queue: asyncio.Queue, args: Dict[str, Any]):
                             }
                         }
                         await queue.put(event)
-                        logging.info(f"Event created for URL {url}: {event}")
-                except aiohttp.ClientError as e:
-                    event = {
-                        "eda_url_content": {
-                            "status_code": 0,
-                            "url": url,
-                            "status": "down",
-                            "content": str(e)
-                        }
+        except aiohttp.ClientError as e:
+            for url in urls:
+                event = {
+                    "eda_url_content": {
+                        "status_code": 0,
+                        "url": url,
+                        "status": "down",
+                        "content": str(e)
                     }
-                    await queue.put(event)
-                    logging.error(f"Error polling URL {url}: {e}")
+                }
+                await queue.put(event)
         await asyncio.sleep(delay)
-        logging.info(f"Waiting for {delay} seconds before next poll.")
 
 if __name__ == "__main__":
     class MockQueue:
