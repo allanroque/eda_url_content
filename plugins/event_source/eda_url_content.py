@@ -58,9 +58,9 @@ async def main(queue: asyncio.Queue, args: Dict[str, Any]):
                         status = "up" if status_code == 200 else "down"
                         event = {
                             "eda_url_content": {
-                                "status_code": status_code,
                                 "url": url,
                                 "status": status,
+                                "status_code": status_code,
                                 "content": content
                             }
                         }
@@ -69,9 +69,9 @@ async def main(queue: asyncio.Queue, args: Dict[str, Any]):
             for url in urls:
                 event = {
                     "eda_url_content": {
-                        "status_code": 0,
                         "url": url,
                         "status": "down",
+                        "status_code": 0,
                         "content": str(e)
                     }
                 }
@@ -83,10 +83,4 @@ if __name__ == "__main__":
         async def put(self, event):
             print("Event received:", event)
 
-    mock_args = {
-        "urls": ["http://192.168.100.23"],
-        "delay": 10,
-        "verify_ssl": False
-    }
-
-    asyncio.run(main(MockQueue(), mock_args))
+    asyncio.run(main(MockQueue(), {"urls": ["http://example.com"], "delay": 10, "verify_ssl": False}))
